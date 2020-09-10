@@ -87,6 +87,7 @@ jobs:
             --role="roles/cloudfunctions.invoker"
 ```
 more options [here](https://cloud.google.com/sdk/gcloud/reference/functions/deploy)
+
 ---
 # Push to master
 
