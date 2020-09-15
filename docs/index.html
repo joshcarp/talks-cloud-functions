@@ -20,6 +20,9 @@
   
 
     <section><h1 id="google-cloud-functions">Google cloud functions</h1>
+<ul>
+<li>Demo repo here: <a href="https://github.com/joshcarp/cloudfunctionsdemo">https://github.com/joshcarp/cloudfunctionsdemo</a></li>
+</ul>
 </section><section>
 <h1 id="google-cloud-functions-1">Google cloud functions</h1>
 <ul>
@@ -102,7 +105,77 @@
 </ul>
 <div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="nohighlight" data-noescape>curl &lt;region&gt;-&lt;projectid&gt;cloudfunctions.net/&lt;<span style="color:#66d9ef">function</span> name&gt;
 &gt; Hello, World!
-</code></pre></div></section>
+</code></pre></div></section><section>
+<h1 id="create-a-gcs-bucket-via-cloud-console">Create a gcs bucket: via cloud console</h1>
+<ul>
+<li>go to <a href="https://console.cloud.google.com/storage/browser">https://console.cloud.google.com/storage/browser</a></li>
+<li>click <code>CREATE BUCKET</code></li>
+</ul>
+</section><section>
+<h1 id="authenticating-locally">Authenticating locally</h1>
+<ul>
+<li><code>export GOOGLE_APPLICATION_CREDENTIALS=&lt;path to json key&gt;</code></li>
+<li>Google cloud service account with:</li>
+<li><code>Storage Admin</code> permissions if creating buckets programmatically</li>
+<li><code>Storage Object Admin</code> for only read/write access to one bucket (can&rsquo;t create new buckets)</li>
+</ul>
+</section><section>
+<h1 id="uploading-files">Uploading files</h1>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="nohighlight" data-noescape><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">upload</span>(<span style="color:#a6e22e">bucket</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">object</span> <span style="color:#66d9ef">string</span>, <span style="color:#a6e22e">r</span> <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Reader</span>) <span style="color:#66d9ef">error</span> {
+	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+	<span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">storage</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">ctx</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;storage.NewClient: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Close</span>()
+
+	<span style="color:#a6e22e">wc</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Bucket</span>(<span style="color:#a6e22e">bucket</span>).<span style="color:#a6e22e">Object</span>(<span style="color:#a6e22e">object</span>).<span style="color:#a6e22e">NewWriter</span>(<span style="color:#a6e22e">ctx</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">_</span>, <span style="color:#a6e22e">err</span> = <span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Copy</span>(<span style="color:#a6e22e">wc</span>, <span style="color:#a6e22e">r</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;io.Copy: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">wc</span>.<span style="color:#a6e22e">Close</span>(); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;Writer.Close: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div></section><section>
+<h1 id="downloading-files">Downloading files</h1>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="nohighlight" data-noescape><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">download</span>(<span style="color:#a6e22e">bucket</span>, <span style="color:#a6e22e">object</span> <span style="color:#66d9ef">string</span>) (<span style="color:#a6e22e">io</span>.<span style="color:#a6e22e">Reader</span>, <span style="color:#66d9ef">error</span>) {
+	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+	<span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">storage</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">ctx</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>, <span style="color:#a6e22e">fmt</span>.<span style="color:#a6e22e">Errorf</span>(<span style="color:#e6db74">&#34;storage.NewClient: %v&#34;</span>, <span style="color:#a6e22e">err</span>)
+	}
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Close</span>()
+	<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Bucket</span>(<span style="color:#a6e22e">bucket</span>).<span style="color:#a6e22e">Object</span>(<span style="color:#a6e22e">object</span>).<span style="color:#a6e22e">NewReader</span>(<span style="color:#a6e22e">ctx</span>)
+}
+</code></pre></div></section><section>
+<h1 id="bonus-create-a-gcs-bucket-in-go">Bonus create a gcs bucket in go</h1>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="nohighlight" data-noescape><span style="color:#66d9ef">func</span> <span style="color:#a6e22e">NewBucket</span>(<span style="color:#a6e22e">bucketName</span> <span style="color:#66d9ef">string</span>)<span style="color:#66d9ef">error</span>{
+	<span style="color:#a6e22e">ctx</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">Background</span>()
+	<span style="color:#a6e22e">client</span>, <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">storage</span>.<span style="color:#a6e22e">NewClient</span>(<span style="color:#a6e22e">ctx</span>)
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+
+	<span style="color:#a6e22e">bucket</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">client</span>.<span style="color:#a6e22e">Bucket</span>(<span style="color:#a6e22e">bucketName</span>)
+	<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">cancel</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">context</span>.<span style="color:#a6e22e">WithTimeout</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">time</span>.<span style="color:#a6e22e">Second</span><span style="color:#f92672">*</span><span style="color:#ae81ff">10</span>)
+	<span style="color:#66d9ef">defer</span> <span style="color:#a6e22e">cancel</span>()
+	<span style="color:#66d9ef">if</span> <span style="color:#a6e22e">err</span> <span style="color:#f92672">:=</span> <span style="color:#a6e22e">bucket</span>.<span style="color:#a6e22e">Create</span>(<span style="color:#a6e22e">ctx</span>, <span style="color:#a6e22e">projectID</span>, <span style="color:#66d9ef">nil</span>); <span style="color:#a6e22e">err</span> <span style="color:#f92672">!=</span> <span style="color:#66d9ef">nil</span> {
+		<span style="color:#66d9ef">return</span> <span style="color:#a6e22e">err</span>
+	}
+	<span style="color:#66d9ef">return</span> <span style="color:#66d9ef">nil</span>
+}
+</code></pre></div><h1 id="authenticating-locally-vs-cloud-functions">Authenticating locally vs Cloud functions</h1>
+<ul>
+<li>Locally the service account needs <code>Storage Admin</code>/ <code>Storage Object Admin</code></li>
+<li>On google cloud functions all functions already have access to the bucket</li>
+</ul>
+<h1 id="demo-repo">Demo repo</h1>
+<ul>
+<li><a href="https://github.com/joshcarp/cloudfunctionsdemo">https://github.com/joshcarp/cloudfunctionsdemo</a></li>
+</ul>
+</section>
 
   
 
